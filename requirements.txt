@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-multipart
+numpy
+pillow
+# 仅重建真值时需要:
+# shapely
+# pyshp
