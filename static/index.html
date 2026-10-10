@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界海陆地图评测基准 - Land-Sea Map Benchmark</title>
+  
+  <!-- Minimalist Vector Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><rect width='32' height='32' rx='7' fill='%2318181b'/><circle cx='16' cy='16' r='9.5' stroke='%23ffffff' stroke-width='1.5'/><ellipse cx='16' cy='16' rx='4.8' ry='9.5' stroke='%23ffffff' stroke-width='1.2'/><line x1='6.5' y1='12' x2='25.5' y2='12' stroke='%23ffffff' stroke-width='1' stroke-dasharray='1.5 1'/><line x1='6.5' y1='20' x2='25.5' y2='20' stroke='%23ffffff' stroke-width='1' stroke-dasharray='1.5 1'/><line x1='6.5' y1='16' x2='25.5' y2='16' stroke='%23ffffff' stroke-width='1.5'/></svg>">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/misans@4.0.0/lib/Normal/MiSans-Regular.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/misans@4.0.0/lib/Normal/MiSans-Medium.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/misans@4.0.0/lib/Normal/MiSans-Semibold.min.css">
+  <script src="/static/vendor/tailwindcss.js"></script>
+  
+  <style>
+    body, button, input, select, textarea, pre, code, * {
+      font-family: 'MiSans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+    .pixelated {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e4e4e7;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="bg-white text-zinc-900 h-screen overflow-hidden flex flex-row">
+
+  <!-- ======================================================== -->
+  <!-- 1. LEFT SIDE: Divided Top (Prompt) & Bottom (Tutorial)   -->
+  <!-- ======================================================== -->
+  <div class="w-[32%] h-full flex flex-col border-r border-zinc-200 overflow-hidden">
+    
+    <!-- Top Block: 提示词 -->
+    <div class="h-[64%] flex flex-col border-b border-zinc-200 overflow-hidden">
+      <div class="px-4 py-2.5 border-b border-zinc-200 flex justify-between items-center bg-zinc-50/70">
+        <div class="flex items-center space-x-2">
+          <!-- Minimalist Logo Icon -->
+          <svg class="w-4 h-4 text-zinc-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3.6 9h16.8"/>
+            <path d="M3.6 15h16.8"/>
+            <path d="M12 3a14 14 0 0 0 0 18"/>
+            <path d="M12 3a14 14 0 0 1 0 18"/>
+          </svg>
+          <span class="text-xs font-semibold tracking-wider text-zinc-800">赛题提示词</span>
+        </div>
+        <button id="copy-btn" onclick="copyPrompt()" class="px-2.5 py-0.5 text-[11px] border border-zinc-300 rounded hover:bg-white active:bg-zinc-100 transition-colors">
+          复制全文
+        </button>
+      </div>
+      <div class="flex-1 p-3.5 overflow-y-auto">
+        <pre id="prompt-content" class="text-xs text-zinc-700 whitespace-pre-wrap leading-relaxed select-all">加载提示词中...</pre>
+      </div>
+    </div>
+
+    <!-- Bottom Block: 使用教程 (极简干净) -->
+    <div class="h-[36%] flex flex-col overflow-hidden bg-zinc-50/30">
+      <div class="px-4 py-2.5 border-b border-zinc-200 bg-zinc-50/70">
+        <span class="text-xs font-semibold tracking-wider text-zinc-800">使用教程</span>
+      </div>
+      <div class="flex-1 p-3.5 overflow-y-auto text-xs text-zinc-700 space-y-2 leading-relaxed">
+        <div class="space-y-1">
+          <p><span class="font-semibold text-zinc-900">1. 复制考题：</span>点击上方“复制全文”，发给任意大语言模型。</p>
+          <p><span class="font-semibold text-zinc-900">2. 运行代码：</span>在本地执行模型交付的 Python 脚本，得到 90×180 判断矩阵 CSV 和黑白 PNG。</p>
+          <p><span class="font-semibold text-zinc-900">3. 拖入评分：</span>把 CSV、180×90 PNG 或 1440×720 PNG 任一文件拖入右上方，立即给出得分和逐格对错图。</p>
+        </div>
+        <div class="pt-2 border-t border-zinc-200/80 text-[11px] text-zinc-500 space-y-0.5">
+          <p>• <span class="text-zinc-800 font-medium">真值：</span>Natural Earth 10m 海陆数据（v5.1.1）在 16,200 个格心采样；湖泊与里海算陆地，南极冰架算水域。</p>
+          <p>• <span class="text-zinc-800 font-medium">评分：</span>海陆相关 MCC 40 + 容错 IoU 20 + 海岸线 F1 20 + 陆块识别 20，均按纬度余弦加权。</p>
+          <p class="text-amber-800">• PNG 只能有纯黑、纯白像素；1440×720 必须是 8 倍最近邻放大，否则拒收。</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 2. RIGHT SIDE: Top (Dropzone & Score) + Bottom (Table)   -->
+  <!-- ======================================================== -->
+  <div class="flex-1 h-full flex flex-col overflow-hidden">
+
+    <!-- Top Half: Upload (Left) and Scorecard (Right) -->
+    <div class="h-[52%] flex flex-row border-b border-zinc-200 overflow-hidden">
+      
+      <!-- Top-Left: 作答输入 (拖拽区) -->
+      <div class="w-1/2 h-full flex flex-col border-r border-zinc-200 overflow-hidden bg-white">
+        <div class="px-4 py-2.5 border-b border-zinc-200 bg-zinc-50/70">
+          <span class="text-xs font-semibold tracking-wider text-zinc-800">作答输入</span>
+        </div>
+        <div class="flex-1 p-5 flex flex-col items-center justify-center">
+          
+          <div id="dropzone" 
+               onclick="document.getElementById('file-input').click()"
+               ondragover="onDragOver(event)" 
+               ondragleave="onDragLeave(event)" 
+               ondrop="onDrop(event)"
+               class="w-full max-w-sm aspect-[2/1] border border-dashed border-zinc-300 rounded flex flex-col items-center justify-center cursor-pointer hover:border-zinc-500 hover:bg-zinc-50/60 transition-all p-3 text-center">
+            
+            <input type="file" id="file-input" accept=".png,.csv" class="hidden" onchange="onFileSelected(event)">
+            
+            <div id="upload-prompt" class="space-y-1">
+              <p class="text-xs font-medium text-zinc-700">拖拽 CSV 或 PNG 至此处</p>
+              <p class="text-[11px] text-zinc-400">90×180 CSV · 180×90 / 1440×720 PNG，或点击浏览</p>
+            </div>
+
+            <div id="preview-container" class="hidden flex flex-col items-center space-y-1.5">
+              <img id="preview-img" class="pixelated max-w-full max-h-28 border border-zinc-200 rounded" />
+              <canvas id="error-canvas" width="180" height="90" class="pixelated hidden w-full max-w-[300px] border border-zinc-200 rounded"></canvas>
+              <div id="error-legend" class="hidden text-[10px] text-zinc-500 space-x-2">
+                <span><i class="inline-block w-2 h-2 align-middle bg-zinc-200 border border-zinc-300"></i> 陆地正确</span>
+                <span><i class="inline-block w-2 h-2 align-middle bg-zinc-800"></i> 水域正确</span>
+                <span><i class="inline-block w-2 h-2 align-middle" style="background:#f43f5e"></i> 多画陆地</span>
+                <span><i class="inline-block w-2 h-2 align-middle" style="background:#3b82f6"></i> 漏画陆地</span>
+              </div>
+              <span id="preview-filename" class="text-[11px] text-zinc-500 truncate max-w-[220px]"></span>
+            </div>
+
+          </div>
+
+          <div id="status-msg" class="mt-2 text-xs text-rose-600 min-h-4 text-center max-w-sm leading-snug"></div>
+
+        </div>
+      </div>
+
+      <!-- Top-Right: 评估结果得分 -->
+      <div class="w-1/2 h-full flex flex-col overflow-hidden bg-white">
+        <div class="px-4 py-2.5 border-b border-zinc-200 bg-zinc-50/70">
+          <span class="text-xs font-semibold tracking-wider text-zinc-800">评估结果</span>
+        </div>
+        
+        <div class="flex-1 p-5 overflow-y-auto">
+
+          <div id="result-placeholder" class="h-full flex items-center justify-center text-xs text-zinc-400">
+            等待在左侧上传作答（CSV 或 PNG）...
+          </div>
+
+          <div id="result-container" class="hidden space-y-3.5">
+            
+            <!-- 总分与锚点 -->
+            <div class="pb-3 border-b border-zinc-200 flex justify-between items-end">
+              <div>
+                <div class="text-[11px] text-zinc-400 uppercase tracking-wider">综合总分</div>
+                <div class="flex items-baseline space-x-1.5">
+                  <span id="score-total" class="text-4xl font-light text-zinc-900 tracking-tight">0.00</span>
+                  <span class="text-xs text-zinc-400">/ 100</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span id="anchor-badge" class="text-xs font-medium px-2 py-0.5 rounded"></span>
+              </div>
+            </div>
+
+            <!-- 4 项得分 -->
+            <div class="space-y-1.5 pb-3 border-b border-zinc-200 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="text-zinc-600">海陆相关 (MCC)</span>
+                <span class="text-zinc-900"><span id="mcc-pts" class="font-medium">0.00</span> / 40</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-zinc-600">空间容错 (±1格 IoU)</span>
+                <span class="text-zinc-900"><span id="tol-pts" class="font-medium">0.00</span> / 20</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-zinc-600">海岸线 (Boundary F1)</span>
+                <span class="text-zinc-900"><span id="coast-pts" class="font-medium">0.00</span> / 20</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-zinc-600">陆块识别 (大陆与岛屿)</span>
+                <span class="text-zinc-900"><span id="landmass-pts" class="font-medium">0.00</span> / 20</span>
+              </div>
+            </div>
+
+            <!-- 诊断指标 -->
+            <div class="grid grid-cols-3 gap-2 text-[11px] text-zinc-500">
+              <div>
+                <span class="block text-zinc-400">海岸偏差</span>
+                <span id="diag-chamfer" class="text-zinc-900 font-medium">0.0 km</span>
+              </div>
+              <div>
+                <span class="block text-zinc-400">加权准确率</span>
+                <span id="diag-acc" class="text-zinc-900 font-medium">0.0%</span>
+              </div>
+              <div>
+                <span class="block text-zinc-400">陆地占比 (作答/真值)</span>
+                <span id="diag-area-sim" class="text-zinc-900 font-medium">0.0%</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Half: 参考榜单 -->
+    <div class="h-[48%] flex flex-col overflow-hidden bg-white">
+      <div class="px-4 py-2 border-b border-zinc-200 bg-zinc-50/70 flex justify-between items-center">
+        <div class="flex items-baseline space-x-2 min-w-0">
+          <span class="text-xs font-semibold tracking-wider text-zinc-800 whitespace-nowrap">本次对比榜</span>
+          <span class="text-[11px] text-zinc-400 truncate" title="每传一个文件自动加一行；点名称可改成模型名。关闭页面后清空，请及时导出。">点名称可改成模型名 · 关闭页面即清空，请及时导出</span>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0 whitespace-nowrap">
+          <span id="lb-msg" class="text-[11px] text-emerald-700"></span>
+          <button onclick="exportBoard('csv')" class="px-2 py-0.5 text-[11px] border border-zinc-300 rounded hover:bg-white">下载 CSV</button>
+          <button onclick="exportBoard('copy')" class="px-2 py-0.5 text-[11px] border border-zinc-300 rounded hover:bg-white">复制表格</button>
+          <button onclick="clearBoard()" class="px-2 py-0.5 text-[11px] border border-zinc-300 rounded hover:bg-white text-zinc-500">清空</button>
+          <span id="lb-version" class="hidden">LANDSEA-NE10M-5.1.1-2DEG</span>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-zinc-200 bg-zinc-50/50 text-[11px] font-semibold text-zinc-500">
+              <th class="py-2 px-3 w-12 text-center">排名</th>
+              <th class="py-2 px-3">评测模型</th>
+              <th class="py-2 px-3 text-center w-16">类型</th>
+              <th class="py-2 px-3 text-right">综合总分</th>
+              <th class="py-2 px-3 text-right">MCC (40)</th>
+              <th class="py-2 px-3 text-right">容错 IoU (20)</th>
+              <th class="py-2 px-3 text-right">海岸线 F1 (20)</th>
+              <th class="py-2 px-3 text-right">陆块识别 (20)</th>
+              <th class="py-2 px-3 text-right">海岸偏差</th>
+              <th class="py-2 px-3 text-right">加权准确率</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody" class="divide-y divide-zinc-100 text-[11px]">
+            <!-- Dynamic rows loaded via JS / API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 1. Load Prompt
+    fetch('/api/prompt')
+      .then(res => res.text())
+      .then(text => { document.getElementById('prompt-content').textContent = text; })
+      .catch(() => { document.getElementById('prompt-content').textContent = "未能加载提示词文件。"; });
+
+    function copyPrompt() {
+      const text = document.getElementById('prompt-content').textContent;
+      const btn = document.getElementById('copy-btn');
+      const done = () => { btn.textContent = '已复制 ✓'; setTimeout(() => { btn.textContent = '复制全文'; }, 2000); };
+      const fallback = () => {
+        const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = '请手动选中复制'; }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    }
+
+    // 2. 对比榜：固定条目（基线 / 已收录模型）+ 本次上传
+    let FIXED = [], SESSION = [], SEQ = 0;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    fetch('/api/leaderboard')
+      .then(res => res.json())
+      .then(data => {
+        if (data.benchmark_version) document.getElementById('lb-version').textContent = data.benchmark_version.replace(/-v\d+$/, '');
+        FIXED = data.leaderboard.map(it => Object.assign({}, it));
+        renderBoard();
+      });
+
+    function addToBoard(r, fileName) {
+      SESSION.push({
+        id: ++SEQ, model_name: fileName.replace(/\.(csv|png)$/i, ''), file: fileName, kind: '本次',
+        composite_score: r.composite_score_100, mcc: r.metrics.mcc, tolerant_iou: r.metrics.tolerant_iou,
+        coastline_f1: r.metrics.coastline_f1, landmass_score: r.metrics.landmass_score,
+        coastline_chamfer_km: r.diagnostics.coastline_chamfer_km, weighted_accuracy: r.diagnostics.weighted_accuracy,
+        input_format: r.input_format, time: new Date().toLocaleString('zh-CN', { hour12: false })
+      });
+      renderBoard();
+    }
+    function renameEntry(id, v) { const e = SESSION.find(x => x.id === id); if (e) e.model_name = v.trim() || e.file; }
+    function removeEntry(id) { SESSION = SESSION.filter(x => x.id !== id); renderBoard(); }
+    function clearBoard() { if (!SESSION.length || confirm('清空本次上传的全部成绩？')) { SESSION = []; renderBoard(); } }
+
+    function sortedBoard() { return FIXED.concat(SESSION).sort((a, b) => b.composite_score - a.composite_score); }
+
+    function renderBoard() {
+      const tbody = document.getElementById('leaderboard-tbody');
+      tbody.innerHTML = '';
+      let rank = 0;
+      sortedBoard().forEach(item => {
+        const tr = document.createElement('tr');
+        const base = item.kind === '基线', mine = item.kind === '本次';
+        tr.className = 'hover:bg-zinc-50/80 transition-colors' + (base ? ' text-zinc-400' : '') + (mine ? ' bg-amber-50/40' : '');
+        let rankBadge = '—';
+        if (!base) { rank++; rankBadge = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank; }
+        const nameCell = mine
+          ? `<input value="${esc(item.model_name)}" title="点击修改模型名称（来源文件：${esc(item.file)}）" onchange="renameEntry(${item.id}, this.value)" class="w-full bg-transparent border-b border-dashed border-zinc-300 focus:border-zinc-700 outline-none font-medium text-zinc-900 text-[11px] py-0.5">`
+          : `<span class="font-medium ${base ? 'text-zinc-400' : 'text-zinc-900'}">${esc(item.model_name)}</span>`;
+        const kindCls = base ? 'bg-zinc-50 text-zinc-400 border border-zinc-200' : mine ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+        const num = base ? 'text-zinc-400' : 'text-zinc-600';
+        tr.innerHTML = `
+            <td class="py-2 px-3 text-center font-medium ${base ? 'text-zinc-300' : 'text-zinc-700'}">${rankBadge}</td>
+            <td class="py-2 px-3 min-w-[160px]">${nameCell}</td>
+            <td class="py-2 px-3 text-center whitespace-nowrap"><span class="px-1.5 py-0.5 rounded text-[10px] ${kindCls}">${item.kind}</span>${mine ? ` <button onclick="removeEntry(${item.id})" title="删除这一行" class="text-zinc-300 hover:text-rose-500 ml-1">✕</button>` : ''}</td>
+            <td class="py-2 px-3 text-right font-semibold ${base ? 'text-zinc-400' : 'text-zinc-900'}">${item.composite_score.toFixed(2)}</td>
+            <td class="py-2 px-3 text-right ${num}">${item.mcc.toFixed(4)}</td>
+            <td class="py-2 px-3 text-right ${num}">${item.tolerant_iou.toFixed(4)}</td>
+            <td class="py-2 px-3 text-right ${num}">${item.coastline_f1.toFixed(4)}</td>
+            <td class="py-2 px-3 text-right ${num}">${item.landmass_score.toFixed(4)}</td>
+            <td class="py-2 px-3 text-right ${num}">${item.coastline_chamfer_km.toFixed(1)} km</td>
+            <td class="py-2 px-3 text-right ${num}">${(item.weighted_accuracy * 100).toFixed(1)}%</td>
+          `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportBoard(mode) {
+      const msg = document.getElementById('lb-msg');
+      const flash = (t) => { msg.textContent = t; setTimeout(() => { msg.textContent = ''; }, 3000); };
+      const head = ['排名', '模型', '类型', '综合总分', 'MCC', '容错IoU', '海岸线F1', '陆块识别', '海岸偏差km', '加权准确率', '来源文件', '输入格式', '评测时间'];
+      let rank = 0;
+      const rows = sortedBoard().map(it => [it.kind === '基线' ? '-' : ++rank, it.model_name, it.kind, it.composite_score.toFixed(2),
+        it.mcc.toFixed(4), it.tolerant_iou.toFixed(4), it.coastline_f1.toFixed(4), it.landmass_score.toFixed(4),
+        it.coastline_chamfer_km.toFixed(1), (it.weighted_accuracy * 100).toFixed(1) + '%', it.file || '', it.input_format || '', it.time || '']);
+      if (mode === 'copy') {
+        const text = [head].concat(rows).map(r => r.join('\t')).join('\n');
+        const fallback = () => {
+          const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy') ? flash('已复制，可直接粘贴到 Excel') : flash('复制失败，请改用下载'); } catch (e) { flash('复制失败，请改用下载'); }
+          document.body.removeChild(ta);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => flash('已复制，可直接粘贴到 Excel'), fallback); else fallback();
+        return;
+      }
+      const q = (v) => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+      const csv = '\uFEFF' + [head].concat(rows).map(r => r.map(q).join(',')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'landsea_leaderboard_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      flash('若未开始下载，请用“复制表格”');
+    }
+
+    // 3. Drag and Drop Logic
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById('dropzone').classList.add('border-zinc-900', 'bg-zinc-50');
+    }
+
+    function onDragLeave(e) {
+      e.preventDefault();
+      document.getElementById('dropzone').classList.remove('border-zinc-900', 'bg-zinc-50');
+    }
+
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('dropzone').classList.remove('border-zinc-900', 'bg-zinc-50');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        uploadFile(e.dataTransfer.files[0]);
+      }
+    }
+
+    function onFileSelected(e) {
+      if (e.target.files && e.target.files[0]) {
+        uploadFile(e.target.files[0]);
+      }
+      e.target.value = '';
+    }
+
+    function uploadFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('upload-prompt').classList.add('hidden');
+        const previewImg = document.getElementById('preview-img');
+        previewImg.src = e.target.result; previewImg.classList.remove('hidden');
+        document.getElementById('error-canvas').classList.add('hidden'); document.getElementById('error-legend').classList.add('hidden');
+        document.getElementById('preview-filename').textContent = file.name;
+        document.getElementById('preview-container').classList.remove('hidden');
+      };
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        file.text().then(t => {
+          const rows = t.replace(/\r/g, '').trim().split('\n'); const cv = document.createElement('canvas');
+          cv.width = 180; cv.height = 90; const ctx = cv.getContext('2d'); const im = ctx.createImageData(180, 90);
+          rows.slice(0, 90).forEach((ln, r) => ln.split(',').slice(0, 180).forEach((v, c) => {
+            const k = 4 * (r * 180 + c), x = v.trim() === '1' ? 255 : 0; im.data[k] = im.data[k + 1] = im.data[k + 2] = x; im.data[k + 3] = 255; }));
+          ctx.putImageData(im, 0, 0); reader.onload({ target: { result: cv.toDataURL() } });
+        });
+      } else reader.readAsDataURL(file);
+
+      const statusMsg = document.getElementById('status-msg');
+      statusMsg.textContent = '正在计算评估...'; statusMsg.classList.replace('text-rose-600','text-zinc-400');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      fetch('/api/evaluate', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.detail || '评测失败'); });
+        }
+        return res.json();
+      })
+      .then(data => {
+        statusMsg.textContent = '';
+        renderResults(data);
+        addToBoard(data, file.name);
+      })
+      .catch(err => {
+        statusMsg.classList.replace('text-zinc-400','text-rose-600'); statusMsg.textContent = '错误: ' + err.message;
+      });
+    }
+
+    function renderResults(data) {
+      document.getElementById('result-placeholder').classList.add('hidden');
+      document.getElementById('result-container').classList.remove('hidden');
+
+      document.getElementById('score-total').textContent = data.composite_score_100.toFixed(2);
+
+      const badge = document.getElementById('anchor-badge');
+      badge.textContent = '格式 OK · ' + data.input_format;
+      badge.className = 'text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+
+      const b = data.official_score_breakdown, d = data.diagnostics;
+      document.getElementById('mcc-pts').textContent = b.mcc_pts.toFixed(2);
+      document.getElementById('tol-pts').textContent = b.tolerant_iou_pts.toFixed(2);
+      document.getElementById('coast-pts').textContent = b.coastline_f1_pts.toFixed(2);
+      document.getElementById('landmass-pts').textContent = b.landmass_pts.toFixed(2);
+
+      document.getElementById('diag-chamfer').textContent = d.coastline_chamfer_km.toFixed(1) + ' km';
+      document.getElementById('diag-acc').textContent = (d.weighted_accuracy * 100).toFixed(1) + '%';
+      document.getElementById('diag-area-sim').textContent = (d.land_share_pred * 100).toFixed(1) + '% / ' + (d.land_share_gt * 100).toFixed(1) + '%';
+
+      // 逐格对错图
+      const cv = document.getElementById('error-canvas'), ctx = cv.getContext('2d'), im = ctx.createImageData(180, 90);
+      const pal = [[39, 39, 42], [228, 228, 231], [244, 63, 94], [59, 130, 246]];
+      for (let i = 0; i < 16200; i++) { const c = pal[+data.error_map[i]]; im.data.set([c[0], c[1], c[2], 255], 4 * i); }
+      ctx.putImageData(im, 0, 0);
+      document.getElementById('preview-img').classList.add('hidden');
+      cv.classList.remove('hidden'); document.getElementById('error-legend').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
