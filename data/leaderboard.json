@@ -1,0 +1,61 @@
+{
+ "benchmark_version": "LANDSEA-NE10M-5.1.1-2DEG-v1",
+ "ground_truth_sha256": "43e08bda7b99274a55be6efdc9f81b14f498b22e5a240acffb4863b98bedfd2d",
+ "updated_at": "2026-10-11",
+ "scoring_weights": {
+  "mcc": 40,
+  "tolerant_iou": 20,
+  "coastline_f1": 20,
+  "landmass": 20
+ },
+ "leaderboard": [
+  {
+   "rank": 1,
+   "model_name": "基线 · 随机 30% 陆地",
+   "kind": "基线",
+   "composite_score": 18.22,
+   "mcc": 0.0111,
+   "tolerant_iou": 0.39,
+   "coastline_f1": 0.377,
+   "landmass_score": 0.1219,
+   "coastline_chamfer_km": 553.0,
+   "weighted_accuracy": 0.5889
+  },
+  {
+   "rank": 2,
+   "model_name": "基线 · 全部画成陆地",
+   "kind": "基线",
+   "composite_score": 16.06,
+   "mcc": 0.0,
+   "tolerant_iou": 0.4016,
+   "coastline_f1": 0.0,
+   "landmass_score": 0.4016,
+   "coastline_chamfer_km": 20015.1,
+   "weighted_accuracy": 0.29
+  },
+  {
+   "rank": 3,
+   "model_name": "基线 · 只画南极（≤65°S）",
+   "kind": "基线",
+   "composite_score": 8.55,
+   "mcc": 0.0953,
+   "tolerant_iou": 0.0796,
+   "coastline_f1": 0.0312,
+   "landmass_score": 0.1259,
+   "coastline_chamfer_km": 4922.1,
+   "weighted_accuracy": 0.7077
+  },
+  {
+   "rank": 4,
+   "model_name": "基线 · 全部画成水域",
+   "kind": "基线",
+   "composite_score": 0.0,
+   "mcc": 0.0,
+   "tolerant_iou": 0.0,
+   "coastline_f1": 0.0,
+   "landmass_score": 0.0,
+   "coastline_chamfer_km": 20015.1,
+   "weighted_accuracy": 0.71
+  }
+ ]
+}
